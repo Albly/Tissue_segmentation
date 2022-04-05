@@ -7,10 +7,30 @@ import pytorch_lightning as pl
 from torch.utils.data import DataLoader
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
+import wandb
 
 from .model import UNet, DeepLab
 from .data import recreate_full_image_list
 from . import loss
+
+def wb_mask(bg_img, pred_mask, true_mask, class_labels):
+    '''
+    bg_img -  torch array with real image [N,C,W,H]
+    pred_mask - torch array with predicted mask [W,H]
+    true_mask - torch array with real mask [W,H]
+    class_labels - dictionary {0:'No cancer', 255:'Cancer'}
+
+    how to log images:  self.log_image('Validation image', wb_mask(...))
+    '''
+
+    bg_img = bg_img[0].numpy()          # get first image from batch
+    pred_mask = pred_mask[0,0].numpy()  # get first image, channel from mask
+    true_mask = true_mask[0,0].numpy()
+
+    out = wandb.Image(bg_img, masks={"prediction" :
+                                      {"mask_data" : pred_mask, "class_labels" : class_labels},
+                                      "ground truth" : {"mask_data" : true_mask, "class_labels" : class_labels}})
+    return out 
 
 
 class ExtractStateDictCallback(pl.Callback):
@@ -96,6 +116,12 @@ class PLModel(pl.LightningModule):
     def validation_step(self, val_batch, batch_idx):
         d = self.shared_step(val_batch)
         self.log("val_loss", d["loss"])
+
+        # TODO
+        # ---------------
+        #self.log_image('Validation image', wb_mask(image, pred_mask, real_mask, {0:'No cancer', 255:'Cancer'} ))
+        # ---------------
+        
         return d
 
     def test_step(self, test_batch, batch_idx):
