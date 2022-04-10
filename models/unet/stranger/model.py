@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from .parts import *
 
 class UNet(nn.Module) :
-    def __init__(self, num_classes = 19, bilinear = False) :
+    def __init__(self, num_classes = 2, bilinear = True) :
         super().__init__()
         self.bilinear = bilinear
         self.num_classes = num_classes
